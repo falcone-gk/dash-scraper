@@ -34,9 +34,12 @@ engine = create_engine(
 )
 
 
-precios_por_dia = pd.read_sql("SELECT * FROM vw_peco_ecommerce_antiparasitarios_daily", engine)
+precios_por_dia = pd.read_sql(
+    "SELECT * FROM vw_peco_ecommerce_antiparasitarios_daily", engine
+)
 
 precios_por_dia["fecha_dia"] = pd.to_datetime(precios_por_dia["fecha_dia"])
+
 
 # Función auxiliar para crear variaciones
 def crear_variacion_html(precio_actual, precio_anterior):
@@ -251,6 +254,10 @@ def crear_graficos(df_filtrado, df_comparativa=None):
         .sort_values("promedio", ascending=False)
         .head(10)
     )
+
+    tabla_resumen = tabla_resumen.round({"promedio": 2})
+    tabla_resumen = tabla_resumen.round({"maximo": 2})
+    tabla_resumen = tabla_resumen.round({"minimo": 2})
 
     tabla = dbc.Table.from_dataframe(
         tabla_resumen, bordered=True, hover=True, responsive=True, size="sm"
@@ -1381,8 +1388,6 @@ def download_csv(n_clicks, filtros):
         return dcc.send_data_frame(
             df_completo.to_csv, "precios_completos.csv", index=False
         )
-
-
 
 
 # EJECUTAR APP
