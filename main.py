@@ -15,6 +15,7 @@ from dash import (
     html,
 )
 from dotenv import load_dotenv
+from flask_caching import Cache
 from sqlalchemy import create_engine
 
 warnings.filterwarnings("ignore")
@@ -34,11 +35,29 @@ engine = create_engine(
 )
 
 
-precios_por_dia = pd.read_sql(
-    "SELECT * FROM vw_peco_ecommerce_antiparasitarios_daily", engine
+# INICIALIZAR APP
+app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+server = app.server
+
+# Cache en memoria
+cache = Cache(
+    server,
+    config={
+        "CACHE_TYPE": "SimpleCache",
+        "CACHE_DEFAULT_TIMEOUT": 60 * 60 * 8,  # 8 horas (por seguridad)
+    },
 )
 
-precios_por_dia["fecha_dia"] = pd.to_datetime(precios_por_dia["fecha_dia"])
+
+@cache.memoize()
+def get_precios_por_dia():
+    query = """
+        SELECT *
+        FROM vw_peco_ecommerce_antiparasitarios_daily
+    """
+    df = pd.read_sql(query, engine)
+    df["fecha_dia"] = pd.to_datetime(df["fecha_dia"])
+    return df
 
 
 # Función auxiliar para crear variaciones
@@ -590,10 +609,6 @@ def crear_graficos(df_filtrado, df_comparativa=None):
     )
 
 
-# INICIALIZAR APP
-app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
-server = app.server
-
 # LAYOUT DASH
 app.layout = dbc.Container(
     [
@@ -1101,7 +1116,8 @@ app.layout = dbc.Container(
     prevent_initial_call=True,
 )
 def limpiar_filtros(n_clicks):
-    fecha_max = precios_por_dia["fecha_dia"].max()
+    df = get_precios_por_dia()
+    fecha_max = df["fecha_dia"].max()
     fecha_inicio = fecha_max - timedelta(days=30)
 
     return (
@@ -1162,16 +1178,16 @@ def update_dashboard(
     start_date,
     end_date,
 ):
+    df = get_precios_por_dia()
     trigger = ctx.triggered_id
 
     # Carga inicial
     if trigger in (None, "init"):
-        fecha_max = precios_por_dia["fecha_dia"].max()
+        fecha_max = df["fecha_dia"].max()
         fecha_inicio = fecha_max - timedelta(days=30)
 
-        df_filtrado = precios_por_dia[
-            (precios_por_dia["fecha_dia"] >= fecha_inicio)
-            & (precios_por_dia["fecha_dia"] <= fecha_max)
+        df_filtrado = df[
+            (df["fecha_dia"] >= fecha_inicio) & (df["fecha_dia"] <= fecha_max)
         ]
 
         (
@@ -1209,7 +1225,7 @@ def update_dashboard(
         )
 
     # Para gráficos principales: aplicar TODOS los filtros incluyendo e-commerce
-    df_filtrado = precios_por_dia.copy()
+    df_filtrado = df.copy()
 
     if nombre_producto:
         df_filtrado = df_filtrado[
@@ -1246,7 +1262,7 @@ def update_dashboard(
         ]
 
     # Para la tabla comparativa: NO APLICAR FILTRO DE E-COMMERCE
-    df_comparativa = precios_por_dia.copy()
+    df_comparativa = df.copy()
 
     if nombre_producto:
         df_comparativa = df_comparativa[
@@ -1330,8 +1346,10 @@ def update_dashboard(
     prevent_initial_call=True,
 )
 def download_csv(n_clicks, filtros):
+    df = get_precios_por_dia()
+
     if filtros and filtros["aplicado"]:
-        df_descarga = precios_por_dia.copy()
+        df_descarga = df.copy()
         if filtros["nombre_producto"] and len(filtros["nombre_producto"]) > 0:
             df_descarga = df_descarga[
                 df_descarga["nombre_producto"].isin(filtros["nombre_producto"])
@@ -1384,7 +1402,7 @@ def download_csv(n_clicks, filtros):
             df_descarga.to_csv, "precios_filtrados_completos.csv", index=False
         )
     else:
-        df_completo = precios_por_dia.copy().sort_values(["fecha_dia", "sku"])
+        df_completo = df.copy().sort_values(["fecha_dia", "sku"])
         return dcc.send_data_frame(
             df_completo.to_csv, "precios_completos.csv", index=False
         )

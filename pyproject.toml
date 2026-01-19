@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "dash-bootstrap-components>=2.0.4",
+    "flask-caching>=2.3.1",
     "gunicorn>=23.0.0",
     "pandas>=2.3.3",
     "plotly>=6.5.2",
