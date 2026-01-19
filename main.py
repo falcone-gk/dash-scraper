@@ -14,13 +14,14 @@ from dash import (
     dcc,
     html,
 )
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 
 warnings.filterwarnings("ignore")
 
 # from dash.dependencies import Input, Output, State
 
-# precios_por_dia["fecha_dia"] = pd.to_datetime(precios_por_dia["fecha_dia"])
+load_dotenv()
 
 host_psql = os.getenv("HOST_PSQL")
 base_datos = os.getenv("BASE_DATOS")
@@ -32,6 +33,10 @@ engine = create_engine(
     f"postgresql+psycopg2://{usuario_psql}:{clave_psql}@{host_psql}/{base_datos}"
 )
 
+
+precios_por_dia = pd.read_sql("SELECT * FROM vw_peco_ecommerce_antiparasitarios_daily", engine)
+
+precios_por_dia["fecha_dia"] = pd.to_datetime(precios_por_dia["fecha_dia"])
 
 # Función auxiliar para crear variaciones
 def crear_variacion_html(precio_actual, precio_anterior):
@@ -580,6 +585,7 @@ def crear_graficos(df_filtrado, df_comparativa=None):
 
 # INICIALIZAR APP
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+server = app.server
 
 # LAYOUT DASH
 app.layout = dbc.Container(
@@ -1377,14 +1383,9 @@ def download_csv(n_clicks, filtros):
         )
 
 
+
+
 # EJECUTAR APP
 if __name__ == "__main__":
-    app.run(debug=False, port=8070)
-
-
-def main():
-    print("Hello from dash-scraper!")
-
-
-if __name__ == "__main__":
-    main()
+    # app.run(debug=False, port=8070)
+    app.run(debug=False)
