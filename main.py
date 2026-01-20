@@ -53,7 +53,7 @@ cache = Cache(
 def get_precios_por_dia(force_refresh: int = 0):
     query = """
         SELECT *
-        FROM productos_antiparasitarios
+        FROM vw_peco_ecommerce_antiparasitarios_daily
     """
     df = pd.read_sql(query, engine)
     df["fecha_dia"] = pd.to_datetime(df["fecha_dia"])
