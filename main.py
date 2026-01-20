@@ -44,16 +44,16 @@ cache = Cache(
     server,
     config={
         "CACHE_TYPE": "SimpleCache",
-        "CACHE_DEFAULT_TIMEOUT": 60 * 60 * 8,  # 8 horas (por seguridad)
+        "CACHE_DEFAULT_TIMEOUT": 60 * 60 * 2,
     },
 )
 
 
 @cache.memoize()
-def get_precios_por_dia():
+def get_precios_por_dia(force_refresh: int = 0):
     query = """
         SELECT *
-        FROM vw_peco_ecommerce_antiparasitarios_daily
+        FROM productos_antiparasitarios
     """
     df = pd.read_sql(query, engine)
     df["fecha_dia"] = pd.to_datetime(df["fecha_dia"])
@@ -609,491 +609,501 @@ def crear_graficos(df_filtrado, df_comparativa=None):
     )
 
 
+def server_layout():
+    df = get_precios_por_dia()
+    return dbc.Container(
+        [
+            # Este componente dispara la carga inicial y las actualizaciones
+            dcc.Interval(id="init", n_intervals=0, max_intervals=1),
+            dbc.Row(
+                [
+                    dbc.Col(
+                        [
+                            html.H1(
+                                "📊 Dashboard de Análisis de Precios Diarios",
+                                className="text-center text-primary mb-4",
+                            ),
+                            html.P(
+                                "Visualización de Precios",
+                                className="text-center text-muted",
+                            ),
+                            dbc.Button(
+                                [
+                                    html.I(className="fas fa-sync-alt"),
+                                    " Actualizar Datos",
+                                ],
+                                id="btn-actualizar",
+                                color="primary",
+                                outline=True,
+                                className="me-1",
+                            ),
+                        ],
+                        width=12,
+                    )
+                ],
+                className="mb-4",
+            ),
+            # Filtros principales, sección 1
+            dbc.Row(
+                [
+                    dbc.Col(
+                        [
+                            dbc.Card(
+                                [
+                                    dbc.CardHeader(
+                                        "🔍 Filtros Principales",
+                                        className="fw-bold",
+                                    ),
+                                    dbc.CardBody(
+                                        [
+                                            html.Label(
+                                                "Nombre del Producto:",
+                                                className="fw-bold",
+                                            ),
+                                            dcc.Dropdown(
+                                                id="filtro-nombre-producto",
+                                                options=[
+                                                    {
+                                                        "label": str(prod),
+                                                        "value": prod,
+                                                    }
+                                                    for prod in sorted(
+                                                        df["nombre_producto"]
+                                                        .dropna()
+                                                        .unique()
+                                                    )
+                                                ],
+                                                value=[],
+                                                multi=True,
+                                                placeholder="Selecciona uno o varios productos...",
+                                                className="mb-3",
+                                            ),
+                                            html.Label(
+                                                "Producto Bulk:",
+                                                className="fw-bold",
+                                            ),
+                                            dcc.Dropdown(
+                                                id="filtro-bulk",
+                                                options=[
+                                                    {
+                                                        "label": "Todos",
+                                                        "value": "ALL",
+                                                    }
+                                                ]
+                                                + [
+                                                    {
+                                                        "label": str(bio),
+                                                        "value": bio,
+                                                    }
+                                                    for bio in sorted(
+                                                        df["segmento_producto"]
+                                                        .dropna()
+                                                        .unique()
+                                                    )
+                                                ],
+                                                value="ALL",
+                                                placeholder="Selecciona producto bulk...",
+                                                clearable=True,
+                                                className="mb-3",
+                                            ),
+                                            html.Label(
+                                                "Presentación:",
+                                                className="fw-bold",
+                                            ),
+                                            dcc.Dropdown(
+                                                id="filtro-presentacion",
+                                                options=[
+                                                    {
+                                                        "label": "Todas",
+                                                        "value": "ALL",
+                                                    }
+                                                ]
+                                                + [
+                                                    {
+                                                        "label": str(pres),
+                                                        "value": pres,
+                                                    }
+                                                    for pres in sorted(
+                                                        df[
+                                                            "presentacion_producto"
+                                                        ]
+                                                        .dropna()
+                                                        .unique()
+                                                    )
+                                                ],
+                                                value="ALL",
+                                                placeholder="Selecciona presentación...",
+                                                clearable=True,
+                                                className="mb-3",
+                                            ),
+                                            html.Label(
+                                                "Subcategoría",
+                                                className="fw-bold",
+                                            ),
+                                            dcc.Dropdown(
+                                                id="filtro-subcategoria",
+                                                options=[
+                                                    {
+                                                        "label": "Todas",
+                                                        "value": "ALL",
+                                                    }
+                                                ]
+                                                + [
+                                                    {
+                                                        "label": str(sub),
+                                                        "value": sub,
+                                                    }
+                                                    for sub in sorted(
+                                                        df[
+                                                            "subcategoria_producto"
+                                                        ]
+                                                        .dropna()
+                                                        .unique()
+                                                    )
+                                                ],
+                                                value="ALL",
+                                                placeholder="Selecciona subcategoría...",
+                                                clearable=True,
+                                                className="mb-3",
+                                            ),
+                                            html.Label(
+                                                "Especie Destino:",
+                                                className="fw-bold",
+                                            ),
+                                            dcc.Dropdown(
+                                                id="filtro-especie",
+                                                options=[
+                                                    {
+                                                        "label": "Todas",
+                                                        "value": "ALL",
+                                                    }
+                                                ]
+                                                + [
+                                                    {
+                                                        "label": str(esp),
+                                                        "value": esp,
+                                                    }
+                                                    for esp in sorted(
+                                                        df[
+                                                            "especie_destino_producto"
+                                                        ]
+                                                        .dropna()
+                                                        .unique()
+                                                    )
+                                                ],
+                                                value="ALL",
+                                                placeholder="Selecciona especie...",
+                                                clearable=True,
+                                                className="mb-3",
+                                            ),
+                                            # Aplicar filtros
+                                            dbc.Button(
+                                                "🔄 Aplicar Filtros",
+                                                id="btn-aplicar-filtros",
+                                                color="primary",
+                                                className="w-100 mt-3",
+                                                n_clicks=0,
+                                            ),
+                                        ]
+                                    ),
+                                ]
+                            )
+                        ],
+                        width=3,
+                    ),
+                    # Gráfico temporal, sección 2
+                    dbc.Col(
+                        [
+                            dbc.Card(
+                                [
+                                    dbc.CardHeader(
+                                        "📈 Evolución Temporal de Precios",
+                                        className="fw-bold",
+                                    ),
+                                    dbc.CardBody(
+                                        [
+                                            dcc.Graph(
+                                                id="grafico-principal",
+                                                style={"height": "600px"},
+                                            )
+                                        ]
+                                    ),
+                                ]
+                            )
+                        ],
+                        width=6,
+                    ),
+                    # Otros filtros, sección 3
+                    dbc.Col(
+                        [
+                            dbc.Card(
+                                [
+                                    dbc.CardHeader(
+                                        "⚙️ Filtros Adicionales",
+                                        className="fw-bold",
+                                    ),
+                                    dbc.CardBody(
+                                        [
+                                            html.Label(
+                                                "E-commerce:",
+                                                className="fw-bold",
+                                            ),
+                                            dcc.Dropdown(
+                                                id="filtro-ecommerce",
+                                                options=[
+                                                    {
+                                                        "label": "Todos",
+                                                        "value": "ALL",
+                                                    }
+                                                ]
+                                                + [
+                                                    {
+                                                        "label": str(eco),
+                                                        "value": eco,
+                                                    }
+                                                    for eco in sorted(
+                                                        df["ecommerce"]
+                                                        .dropna()
+                                                        .unique()
+                                                    )
+                                                ],
+                                                value="ALL",
+                                                placeholder="Selecciona e-commerce...",
+                                                clearable=True,
+                                                className="mb-3",
+                                            ),
+                                            html.Label(
+                                                "Rango de Fechas:",
+                                                className="fw-bold",
+                                            ),
+                                            dcc.DatePickerRange(
+                                                id="filtro-fechas",
+                                                min_date_allowed=df[
+                                                    "fecha_dia"
+                                                ].min(),
+                                                max_date_allowed=df[
+                                                    "fecha_dia"
+                                                ].max(),
+                                                start_date=df["fecha_dia"].max()
+                                                - timedelta(days=30),
+                                                end_date=df["fecha_dia"].max()
+                                                + timedelta(days=1),
+                                                className="mb-3 w-100",
+                                            ),
+                                            html.Label(
+                                                "Marca:", className="fw-bold"
+                                            ),
+                                            dcc.Dropdown(
+                                                id="filtro-marca",
+                                                options=[
+                                                    {
+                                                        "label": "Todas",
+                                                        "value": "ALL",
+                                                    }
+                                                ]
+                                                + [
+                                                    {
+                                                        "label": str(marca),
+                                                        "value": marca,
+                                                    }
+                                                    for marca in sorted(
+                                                        df["marca_producto"]
+                                                        .dropna()
+                                                        .unique()
+                                                    )
+                                                ],
+                                                value="ALL",
+                                                placeholder="Selecciona marca...",
+                                                clearable=True,
+                                                className="mb-3",
+                                            ),
+                                            html.Label(
+                                                "Producto Biomont:",
+                                                className="fw-bold",
+                                            ),
+                                            dcc.Dropdown(
+                                                id="filtro-biomont",
+                                                options=[
+                                                    {
+                                                        "label": "Todos",
+                                                        "value": "ALL",
+                                                    }
+                                                ]
+                                                + [
+                                                    {
+                                                        "label": str(bio),
+                                                        "value": bio,
+                                                    }
+                                                    for bio in sorted(
+                                                        df["biomont_producto"]
+                                                        .dropna()
+                                                        .unique()
+                                                    )
+                                                ],
+                                                value="ALL",
+                                                placeholder="Selecciona biomont...",
+                                                clearable=True,
+                                                className="mb-3",
+                                            ),
+                                            # Botón para limpiar filtros
+                                            dbc.Button(
+                                                "🧹 Limpiar Filtros",
+                                                id="btn-limpiar-filtros",
+                                                color="secondary",
+                                                className="w-100 mt-2",
+                                                n_clicks=0,
+                                            ),
+                                        ]
+                                    ),
+                                ],
+                                className="mb-4",
+                            ),
+                            dbc.Card(
+                                [
+                                    dbc.CardHeader(
+                                        "📊 Estadísticas Rápidas",
+                                        className="fw-bold",
+                                    ),
+                                    dbc.CardBody(
+                                        [
+                                            html.Div(
+                                                id="estadisticas-rapidas",
+                                                className="small",
+                                            )
+                                        ]
+                                    ),
+                                ]
+                            ),
+                        ],
+                        width=3,
+                    ),
+                ],
+                className="mb-4",
+            ),
+            # Segunda fila: Gráficos adicionales
+            dbc.Row(
+                [
+                    dbc.Col(
+                        [
+                            dbc.Card(
+                                [
+                                    dbc.CardHeader(
+                                        "📉 Distribución de Precios",
+                                        className="fw-bold",
+                                    ),
+                                    dbc.CardBody(
+                                        [
+                                            dcc.Graph(
+                                                id="grafico-boxplot",
+                                                style={"height": "300px"},
+                                            )
+                                        ]
+                                    ),
+                                ]
+                            )
+                        ],
+                        width=6,
+                    ),
+                    dbc.Col(
+                        [
+                            dbc.Card(
+                                [
+                                    dbc.CardHeader(
+                                        "🔢 Conteo de SKUs por Día",
+                                        className="fw-bold",
+                                    ),
+                                    dbc.CardBody(
+                                        [
+                                            dcc.Graph(
+                                                id="grafico-conteo",
+                                                style={"height": "300px"},
+                                            )
+                                        ]
+                                    ),
+                                ]
+                            )
+                        ],
+                        width=6,
+                    ),
+                ],
+                className="mb-4",
+            ),
+            # Tercera fila: Nueva tabla comparativa
+            dbc.Row(
+                [
+                    dbc.Col(
+                        [
+                            dbc.Card(
+                                [
+                                    dbc.CardHeader(
+                                        "🏪 Comparativa de Precios por E-commerce",
+                                        className="fw-bold",
+                                    ),
+                                    dbc.CardBody(
+                                        [
+                                            html.Div(
+                                                id="tabla-comparativa",
+                                                style={"overflowX": "auto"},
+                                            )
+                                        ]
+                                    ),
+                                    dbc.CardFooter(
+                                        "Comparativa del día más reciente disponible. Los precios son promedios diarios.",
+                                        className="text-muted small",
+                                    ),
+                                ]
+                            )
+                        ],
+                        width=12,
+                    )
+                ],
+                className="mb-4",
+            ),
+            # Cuarta fila: Tabla de datos original
+            dbc.Row(
+                [
+                    dbc.Col(
+                        [
+                            dbc.Card(
+                                [
+                                    dbc.CardHeader(
+                                        "📋 Datos Detallados",
+                                        className="fw-bold",
+                                    ),
+                                    dbc.CardBody(
+                                        [
+                                            html.Div(id="tabla-datos"),
+                                            html.Div(
+                                                [
+                                                    dbc.Button(
+                                                        "📥 Descargar CSV",
+                                                        id="btn-descargar",
+                                                        color="success",
+                                                        className="mt-3 w-100",
+                                                    ),
+                                                    dcc.Download(
+                                                        id="download-dataframe-csv"
+                                                    ),
+                                                ]
+                                            ),
+                                        ]
+                                    ),
+                                ]
+                            )
+                        ],
+                        width=12,
+                    )
+                ]
+            ),
+            # Almacenar estado de los filtros
+            dcc.Store(id="store-filtros-aplicados", data={"aplicado": False}),
+        ],
+        fluid=True,
+    )
+
+
 # LAYOUT DASH
-app.layout = dbc.Container(
-    [
-        dcc.Interval(id="init", n_intervals=0, max_intervals=1),
-        dbc.Row(
-            [
-                dbc.Col(
-                    [
-                        html.H1(
-                            "📊 Dashboard de Análisis de Precios Diarios",
-                            className="text-center text-primary mb-4",
-                        ),
-                        html.P(
-                            "Visualización de Precios",
-                            className="text-center text-muted",
-                        ),
-                    ],
-                    width=12,
-                )
-            ],
-            className="mb-4",
-        ),
-        # Filtros principales, sección 1
-        dbc.Row(
-            [
-                dbc.Col(
-                    [
-                        dbc.Card(
-                            [
-                                dbc.CardHeader(
-                                    "🔍 Filtros Principales",
-                                    className="fw-bold",
-                                ),
-                                dbc.CardBody(
-                                    [
-                                        html.Label(
-                                            "Nombre del Producto:",
-                                            className="fw-bold",
-                                        ),
-                                        dcc.Dropdown(
-                                            id="filtro-nombre-producto",
-                                            options=[
-                                                {
-                                                    "label": str(prod),
-                                                    "value": prod,
-                                                }
-                                                for prod in sorted(
-                                                    precios_por_dia[
-                                                        "nombre_producto"
-                                                    ]
-                                                    .dropna()
-                                                    .unique()
-                                                )
-                                            ],
-                                            value=[],
-                                            multi=True,
-                                            placeholder="Selecciona uno o varios productos...",
-                                            className="mb-3",
-                                        ),
-                                        html.Label(
-                                            "Producto Bulk:",
-                                            className="fw-bold",
-                                        ),
-                                        dcc.Dropdown(
-                                            id="filtro-bulk",
-                                            options=[
-                                                {
-                                                    "label": "Todos",
-                                                    "value": "ALL",
-                                                }
-                                            ]
-                                            + [
-                                                {
-                                                    "label": str(bio),
-                                                    "value": bio,
-                                                }
-                                                for bio in sorted(
-                                                    precios_por_dia[
-                                                        "segmento_producto"
-                                                    ]
-                                                    .dropna()
-                                                    .unique()
-                                                )
-                                            ],
-                                            value="ALL",
-                                            placeholder="Selecciona producto bulk...",
-                                            clearable=True,
-                                            className="mb-3",
-                                        ),
-                                        html.Label(
-                                            "Presentación:", className="fw-bold"
-                                        ),
-                                        dcc.Dropdown(
-                                            id="filtro-presentacion",
-                                            options=[
-                                                {
-                                                    "label": "Todas",
-                                                    "value": "ALL",
-                                                }
-                                            ]
-                                            + [
-                                                {
-                                                    "label": str(pres),
-                                                    "value": pres,
-                                                }
-                                                for pres in sorted(
-                                                    precios_por_dia[
-                                                        "presentacion_producto"
-                                                    ]
-                                                    .dropna()
-                                                    .unique()
-                                                )
-                                            ],
-                                            value="ALL",
-                                            placeholder="Selecciona presentación...",
-                                            clearable=True,
-                                            className="mb-3",
-                                        ),
-                                        html.Label(
-                                            "Subcategoría", className="fw-bold"
-                                        ),
-                                        dcc.Dropdown(
-                                            id="filtro-subcategoria",
-                                            options=[
-                                                {
-                                                    "label": "Todas",
-                                                    "value": "ALL",
-                                                }
-                                            ]
-                                            + [
-                                                {
-                                                    "label": str(sub),
-                                                    "value": sub,
-                                                }
-                                                for sub in sorted(
-                                                    precios_por_dia[
-                                                        "subcategoria_producto"
-                                                    ]
-                                                    .dropna()
-                                                    .unique()
-                                                )
-                                            ],
-                                            value="ALL",
-                                            placeholder="Selecciona subcategoría...",
-                                            clearable=True,
-                                            className="mb-3",
-                                        ),
-                                        html.Label(
-                                            "Especie Destino:",
-                                            className="fw-bold",
-                                        ),
-                                        dcc.Dropdown(
-                                            id="filtro-especie",
-                                            options=[
-                                                {
-                                                    "label": "Todas",
-                                                    "value": "ALL",
-                                                }
-                                            ]
-                                            + [
-                                                {
-                                                    "label": str(esp),
-                                                    "value": esp,
-                                                }
-                                                for esp in sorted(
-                                                    precios_por_dia[
-                                                        "especie_destino_producto"
-                                                    ]
-                                                    .dropna()
-                                                    .unique()
-                                                )
-                                            ],
-                                            value="ALL",
-                                            placeholder="Selecciona especie...",
-                                            clearable=True,
-                                            className="mb-3",
-                                        ),
-                                        # Aplicar filtros
-                                        dbc.Button(
-                                            "🔄 Aplicar Filtros",
-                                            id="btn-aplicar-filtros",
-                                            color="primary",
-                                            className="w-100 mt-3",
-                                            n_clicks=0,
-                                        ),
-                                    ]
-                                ),
-                            ]
-                        )
-                    ],
-                    width=3,
-                ),
-                # Gráfico temporal, sección 2
-                dbc.Col(
-                    [
-                        dbc.Card(
-                            [
-                                dbc.CardHeader(
-                                    "📈 Evolución Temporal de Precios",
-                                    className="fw-bold",
-                                ),
-                                dbc.CardBody(
-                                    [
-                                        dcc.Graph(
-                                            id="grafico-principal",
-                                            style={"height": "600px"},
-                                        )
-                                    ]
-                                ),
-                            ]
-                        )
-                    ],
-                    width=6,
-                ),
-                # Otros filtros, sección 3
-                dbc.Col(
-                    [
-                        dbc.Card(
-                            [
-                                dbc.CardHeader(
-                                    "⚙️ Filtros Adicionales", className="fw-bold"
-                                ),
-                                dbc.CardBody(
-                                    [
-                                        html.Label(
-                                            "E-commerce:", className="fw-bold"
-                                        ),
-                                        dcc.Dropdown(
-                                            id="filtro-ecommerce",
-                                            options=[
-                                                {
-                                                    "label": "Todos",
-                                                    "value": "ALL",
-                                                }
-                                            ]
-                                            + [
-                                                {
-                                                    "label": str(eco),
-                                                    "value": eco,
-                                                }
-                                                for eco in sorted(
-                                                    precios_por_dia["ecommerce"]
-                                                    .dropna()
-                                                    .unique()
-                                                )
-                                            ],
-                                            value="ALL",
-                                            placeholder="Selecciona e-commerce...",
-                                            clearable=True,
-                                            className="mb-3",
-                                        ),
-                                        html.Label(
-                                            "Rango de Fechas:",
-                                            className="fw-bold",
-                                        ),
-                                        dcc.DatePickerRange(
-                                            id="filtro-fechas",
-                                            min_date_allowed=precios_por_dia[
-                                                "fecha_dia"
-                                            ].min(),
-                                            max_date_allowed=precios_por_dia[
-                                                "fecha_dia"
-                                            ].max(),
-                                            start_date=precios_por_dia[
-                                                "fecha_dia"
-                                            ].max()
-                                            - timedelta(days=30),
-                                            end_date=precios_por_dia[
-                                                "fecha_dia"
-                                            ].max(),
-                                            className="mb-3",
-                                        ),
-                                        html.Label(
-                                            "Marca:", className="fw-bold"
-                                        ),
-                                        dcc.Dropdown(
-                                            id="filtro-marca",
-                                            options=[
-                                                {
-                                                    "label": "Todas",
-                                                    "value": "ALL",
-                                                }
-                                            ]
-                                            + [
-                                                {
-                                                    "label": str(marca),
-                                                    "value": marca,
-                                                }
-                                                for marca in sorted(
-                                                    precios_por_dia[
-                                                        "marca_producto"
-                                                    ]
-                                                    .dropna()
-                                                    .unique()
-                                                )
-                                            ],
-                                            value="ALL",
-                                            placeholder="Selecciona marca...",
-                                            clearable=True,
-                                            className="mb-3",
-                                        ),
-                                        html.Label(
-                                            "Producto Biomont:",
-                                            className="fw-bold",
-                                        ),
-                                        dcc.Dropdown(
-                                            id="filtro-biomont",
-                                            options=[
-                                                {
-                                                    "label": "Todos",
-                                                    "value": "ALL",
-                                                }
-                                            ]
-                                            + [
-                                                {
-                                                    "label": str(bio),
-                                                    "value": bio,
-                                                }
-                                                for bio in sorted(
-                                                    precios_por_dia[
-                                                        "biomont_producto"
-                                                    ]
-                                                    .dropna()
-                                                    .unique()
-                                                )
-                                            ],
-                                            value="ALL",
-                                            placeholder="Selecciona biomont...",
-                                            clearable=True,
-                                            className="mb-3",
-                                        ),
-                                        # Botón para limpiar filtros
-                                        dbc.Button(
-                                            "🧹 Limpiar Filtros",
-                                            id="btn-limpiar-filtros",
-                                            color="secondary",
-                                            className="w-100 mt-2",
-                                            n_clicks=0,
-                                        ),
-                                    ]
-                                ),
-                            ],
-                            className="mb-4",
-                        ),
-                        dbc.Card(
-                            [
-                                dbc.CardHeader(
-                                    "📊 Estadísticas Rápidas",
-                                    className="fw-bold",
-                                ),
-                                dbc.CardBody(
-                                    [
-                                        html.Div(
-                                            id="estadisticas-rapidas",
-                                            className="small",
-                                        )
-                                    ]
-                                ),
-                            ]
-                        ),
-                    ],
-                    width=3,
-                ),
-            ],
-            className="mb-4",
-        ),
-        # Segunda fila: Gráficos adicionales
-        dbc.Row(
-            [
-                dbc.Col(
-                    [
-                        dbc.Card(
-                            [
-                                dbc.CardHeader(
-                                    "📉 Distribución de Precios",
-                                    className="fw-bold",
-                                ),
-                                dbc.CardBody(
-                                    [
-                                        dcc.Graph(
-                                            id="grafico-boxplot",
-                                            style={"height": "300px"},
-                                        )
-                                    ]
-                                ),
-                            ]
-                        )
-                    ],
-                    width=6,
-                ),
-                dbc.Col(
-                    [
-                        dbc.Card(
-                            [
-                                dbc.CardHeader(
-                                    "🔢 Conteo de SKUs por Día",
-                                    className="fw-bold",
-                                ),
-                                dbc.CardBody(
-                                    [
-                                        dcc.Graph(
-                                            id="grafico-conteo",
-                                            style={"height": "300px"},
-                                        )
-                                    ]
-                                ),
-                            ]
-                        )
-                    ],
-                    width=6,
-                ),
-            ],
-            className="mb-4",
-        ),
-        # Tercera fila: Nueva tabla comparativa
-        dbc.Row(
-            [
-                dbc.Col(
-                    [
-                        dbc.Card(
-                            [
-                                dbc.CardHeader(
-                                    "🏪 Comparativa de Precios por E-commerce",
-                                    className="fw-bold",
-                                ),
-                                dbc.CardBody(
-                                    [
-                                        html.Div(
-                                            id="tabla-comparativa",
-                                            style={"overflowX": "auto"},
-                                        )
-                                    ]
-                                ),
-                                dbc.CardFooter(
-                                    "Comparativa del día más reciente disponible. Los precios son promedios diarios.",
-                                    className="text-muted small",
-                                ),
-                            ]
-                        )
-                    ],
-                    width=12,
-                )
-            ],
-            className="mb-4",
-        ),
-        # Cuarta fila: Tabla de datos original
-        dbc.Row(
-            [
-                dbc.Col(
-                    [
-                        dbc.Card(
-                            [
-                                dbc.CardHeader(
-                                    "📋 Datos Detallados", className="fw-bold"
-                                ),
-                                dbc.CardBody(
-                                    [
-                                        html.Div(id="tabla-datos"),
-                                        html.Div(
-                                            [
-                                                dbc.Button(
-                                                    "📥 Descargar CSV",
-                                                    id="btn-descargar",
-                                                    color="success",
-                                                    className="mt-3 w-100",
-                                                ),
-                                                dcc.Download(
-                                                    id="download-dataframe-csv"
-                                                ),
-                                            ]
-                                        ),
-                                    ]
-                                ),
-                            ]
-                        )
-                    ],
-                    width=12,
-                )
-            ]
-        ),
-        # Almacenar estado de los filtros
-        dcc.Store(id="store-filtros-aplicados", data={"aplicado": False}),
-    ],
-    fluid=True,
-)
+app.layout = server_layout()
 
 # CALLBACKS ########################################################################
 
@@ -1147,6 +1157,7 @@ def limpiar_filtros(n_clicks):
     ],
     [
         Input("init", "n_intervals"),
+        Input("btn-actualizar", "n_clicks"),
         Input("btn-aplicar-filtros", "n_clicks"),
         Input("btn-limpiar-filtros", "n_clicks"),
     ],
@@ -1165,6 +1176,7 @@ def limpiar_filtros(n_clicks):
 )
 def update_dashboard(
     _,
+    n_clicks_actualizar,
     n_clicks_aplicar,
     n_clicks_limpiar,
     nombre_producto,
@@ -1223,6 +1235,9 @@ def update_dashboard(
             tabla_comparativa,
             filtros,
         )
+
+    elif trigger == "btn-actualizar":
+        df = get_precios_por_dia(force_refresh=n_clicks_actualizar)
 
     # Para gráficos principales: aplicar TODOS los filtros incluyendo e-commerce
     df_filtrado = df.copy()
