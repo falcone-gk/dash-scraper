@@ -50,7 +50,7 @@ cache = Cache(
 
 
 @cache.memoize()
-def get_precios_por_dia(force_refresh: int = 0):
+def get_precios_por_dia():
     query = """
         SELECT *
         FROM vw_peco_ecommerce_antiparasitarios_daily
@@ -1237,7 +1237,8 @@ def update_dashboard(
         )
 
     elif trigger == "btn-actualizar":
-        df = get_precios_por_dia(force_refresh=n_clicks_actualizar)
+        cache.delete_memoized(get_precios_por_dia)
+        df = get_precios_por_dia()
 
     # Para gráficos principales: aplicar TODOS los filtros incluyendo e-commerce
     df_filtrado = df.copy()
