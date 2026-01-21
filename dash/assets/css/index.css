@@ -1,0 +1,13 @@
+:root {
+  --marimo-text-font: "IBM Plex Sans", system-ui, sans-serif;
+  --marimo-heading-font: "IBM Plex Sans", system-ui, sans-serif;
+  --marimo-monospace-font: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+div:has(> #radix-_r_2_) {
+  display: none;
+}
+
+div:has(> #radix-_r_2_) + div {
+  display: none;
+}
