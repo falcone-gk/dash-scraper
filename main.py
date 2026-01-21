@@ -5,6 +5,10 @@ from datetime import timedelta
 import dash_bootstrap_components as dbc
 import pandas as pd
 import plotly.graph_objects as go
+from dotenv import load_dotenv
+from flask_caching import Cache
+from sqlalchemy import create_engine
+
 from dash import (
     Dash,
     Input,
@@ -14,9 +18,6 @@ from dash import (
     dcc,
     html,
 )
-from dotenv import load_dotenv
-from flask_caching import Cache
-from sqlalchemy import create_engine
 
 warnings.filterwarnings("ignore")
 
@@ -980,7 +981,38 @@ def server_layout():
                 ],
                 className="mb-4",
             ),
-            # Segunda fila: Gráficos adicionales
+            # Segunda fila: Nueva tabla comparativa
+            dbc.Row(
+                [
+                    dbc.Col(
+                        [
+                            dbc.Card(
+                                [
+                                    dbc.CardHeader(
+                                        "🏪 Comparativa de Precios por E-commerce",
+                                        className="fw-bold",
+                                    ),
+                                    dbc.CardBody(
+                                        [
+                                            html.Div(
+                                                id="tabla-comparativa",
+                                                style={"overflowX": "auto"},
+                                            )
+                                        ]
+                                    ),
+                                    dbc.CardFooter(
+                                        "Comparativa del día más reciente disponible. Los precios son promedios diarios.",
+                                        className="text-muted small",
+                                    ),
+                                ]
+                            )
+                        ],
+                        width=12,
+                    )
+                ],
+                className="mb-4",
+            ),
+            # Tercer fila: Gráficos adicionales
             dbc.Row(
                 [
                     dbc.Col(
@@ -1025,37 +1057,6 @@ def server_layout():
                         ],
                         width=6,
                     ),
-                ],
-                className="mb-4",
-            ),
-            # Tercera fila: Nueva tabla comparativa
-            dbc.Row(
-                [
-                    dbc.Col(
-                        [
-                            dbc.Card(
-                                [
-                                    dbc.CardHeader(
-                                        "🏪 Comparativa de Precios por E-commerce",
-                                        className="fw-bold",
-                                    ),
-                                    dbc.CardBody(
-                                        [
-                                            html.Div(
-                                                id="tabla-comparativa",
-                                                style={"overflowX": "auto"},
-                                            )
-                                        ]
-                                    ),
-                                    dbc.CardFooter(
-                                        "Comparativa del día más reciente disponible. Los precios son promedios diarios.",
-                                        className="text-muted small",
-                                    ),
-                                ]
-                            )
-                        ],
-                        width=12,
-                    )
                 ],
                 className="mb-4",
             ),
