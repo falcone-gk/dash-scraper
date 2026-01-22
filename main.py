@@ -1,3 +1,4 @@
+import base64
 import os
 import warnings
 from datetime import timedelta
@@ -610,8 +611,14 @@ def crear_graficos(df_filtrado, df_comparativa=None):
     )
 
 
+def image_to_base64(path):
+    with open(path, "rb") as f:
+        return base64.b64encode(f.read()).decode()
+
+
 def server_layout():
     df = get_precios_por_dia()
+    logo_biomont = image_to_base64("dash/public/logo-biomont.png")
     return dbc.Container(
         [
             # Este componente dispara la carga inicial y las actualizaciones
@@ -620,29 +627,78 @@ def server_layout():
                 [
                     dbc.Col(
                         [
-                            html.H1(
-                                "📊 Dashboard de Análisis de Precios Diarios",
-                                className="text-center text-primary mb-4",
-                            ),
-                            html.P(
-                                "Visualización de Precios",
-                                className="text-center text-muted",
-                            ),
-                            dbc.Button(
-                                [
-                                    html.I(className="fas fa-sync-alt"),
-                                    " Actualizar Datos",
-                                ],
-                                id="btn-actualizar",
-                                color="primary",
-                                outline=True,
-                                className="me-1",
-                            ),
+                            dbc.Card(
+                                dbc.CardBody(
+                                    [
+                                        dbc.Row(
+                                            align="center",
+                                            children=[
+                                                # Logo
+                                                dbc.Col(
+                                                    html.Img(
+                                                        src=f"data:image/png;base64,{logo_biomont}",
+                                                        style={
+                                                            "height": "46px"
+                                                        },
+                                                    ),
+                                                    width="auto",
+                                                ),
+                                                # Título
+                                                dbc.Col(
+                                                    [
+                                                        html.H4(
+                                                            "Monitoreo de Precios en E-commerce",
+                                                            className="fw-bold text-primary mb-0",
+                                                        ),
+                                                        html.Small(
+                                                            "Business Intelligence",
+                                                            className="text-muted",
+                                                        ),
+                                                    ]
+                                                ),
+                                                # Metadata derecha
+                                                dbc.Col(
+                                                    html.Div(
+                                                        [
+                                                            html.Div(
+                                                                "Actualización diaria",
+                                                                className="text-muted small",
+                                                            ),
+                                                            html.Div(
+                                                                "Fuente: Scraping e-commerce",
+                                                                className="text-muted small",
+                                                            ),
+                                                        ],
+                                                        className="text-end",
+                                                    ),
+                                                    width="auto",
+                                                ),
+                                            ],
+                                        )
+                                    ]
+                                ),
+                                className="shadow-sm border-0",
+                            )
                         ],
                         width=12,
                     )
                 ],
                 className="mb-4",
+            ),
+            dbc.Col(
+                [
+                    dbc.Button(
+                        [
+                            html.I(className="fas fa-sync-alt"),
+                            " Actualizar Datos",
+                        ],
+                        id="btn-actualizar",
+                        color="primary",
+                        outline=True,
+                        className="me-1",
+                    ),
+                ],
+                className="block mb-4",
             ),
             # Filtros principales, sección 1
             dbc.Row(
@@ -1428,4 +1484,4 @@ def download_csv(n_clicks, filtros):
 # EJECUTAR APP
 if __name__ == "__main__":
     # app.run(debug=False, port=8070)
-    app.run(debug=False)
+    app.run(debug=True)
