@@ -2,7 +2,7 @@ import marimo
 
 __generated_with = "0.19.4"
 app = marimo.App(
-    width="full",
+    width="medium",
     app_title=" Monitoreo de Precios en E-commerce ",
     css_file="assets/css/index.css",
     html_head_file="assets/html/head.html",
@@ -14,6 +14,7 @@ def _():
     import os
     import warnings
     from datetime import timedelta
+    import math
 
     import marimo as mo
     import pandas as pd
@@ -22,7 +23,7 @@ def _():
     from sqlalchemy import create_engine
 
     warnings.filterwarnings("ignore")
-    return create_engine, go, load_dotenv, mo, os, pd, timedelta
+    return create_engine, go, load_dotenv, math, mo, os, pd, timedelta
 
 
 @app.cell
@@ -529,14 +530,18 @@ def _(card_filtros, card_filtros_ad, card_main_fig, el_stats, mo):
 
 
 @app.cell
-def _(mo):
+def _(math, mo):
     def crear_variacion_html(precio_actual, precio_anterior):
         """Crea el HTML para mostrar la variación con el día anterior en marimo"""
 
-        # 1. Validaciones iniciales
+        es_nan_actual = isinstance(precio_actual, float) and math.isnan(precio_actual)
+
+        # Validaciones iniciales
         if (
             precio_anterior is None
+            or math.isnan(precio_anterior)
             or precio_actual == "-"
+            or es_nan_actual
             or not isinstance(precio_actual, (int, float))
         ):
             return mo.Html(
@@ -544,7 +549,7 @@ def _(mo):
             )
 
         try:
-            # 2. Cálculos
+            # Cálculos
             variacion: float = float(precio_actual) - precio_anterior
             variacion_porcentaje: float = (
                 (variacion / precio_anterior) * 100
@@ -552,7 +557,8 @@ def _(mo):
                 else 0
             )
 
-            # 3. Lógica de estilos según tendencia
+            # Lógica de estilos según tendencia
+            # Evitar problemas de precisión de punto flotante
             if variacion > 0:
                 color_class = "text-emerald-600"
                 icon = "📈"
@@ -566,8 +572,6 @@ def _(mo):
                     '<span class="text-gray-500 text-xs">➡️ Sin cambio</span>'
                 )
 
-            # 4. Retorno con Tailwind v4
-            # Usamos whitespace-nowrap para evitar saltos de línea en tablas o listas
             return mo.Html(
                 f"""
                 <span class="text-[11px] whitespace-nowrap text-slate-700">
@@ -586,13 +590,13 @@ def _(mo):
 
 
 @app.cell
-def _(Dict, List, crear_variacion_html, mo, pd):
+def _(crear_variacion_html, mo, pd):
     def render_comparativa_ecommerce(df_comp):
         if df_comp is None or len(df_comp) == 0:
             return mo.md("⚠️ No hay datos para comparar").bold().py(2).center()
 
         # 1. Preparación de Fechas y Tiendas
-        todas_tiendas: List[str] = sorted(
+        todas_tiendas = sorted(
             df_comp["ecommerce"].dropna().unique()
         )
         tiendas = (
@@ -625,7 +629,7 @@ def _(Dict, List, crear_variacion_html, mo, pd):
         pivot_table = pivot_table[["nombre_producto"] + tiendas]
 
         # 3. Variaciones vs Ayer
-        variaciones: Dict[str, Dict[str, float]] = {}
+        variaciones = {}
         if not df_ayer.empty:
             precios_ayer = (
                 df_ayer.groupby(["nombre_producto", "ecommerce"])["promedio"]
@@ -704,7 +708,7 @@ def _(Dict, List, crear_variacion_html, mo, pd):
         # 5. Header y Layout Final
         header_tiendas = "".join(
             [
-                f'<th class="p-3 text-xs font-bold uppercase tracking-wider text-slate-500 bg-slate-100 border border-slate-200 sticky top-0 z-20">{t}</th>'
+                f'<th class="p-3 text-xs text-center font-bold uppercase text-slate-500 bg-slate-100 border border-slate-200">{t}</th>'
                 for t in tiendas
             ]
         )
@@ -915,6 +919,11 @@ def _(custom_card, mo, tabla_resumen):
         title="📋 Datos Detallados", content=table, width="100%"
     )
     card_table
+    return
+
+
+@app.cell
+def _():
     return
 
 
