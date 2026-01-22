@@ -11,10 +11,10 @@ app = marimo.App(
 
 @app.cell
 def _():
+    import math
     import os
     import warnings
     from datetime import timedelta
-    import math
 
     import marimo as mo
     import pandas as pd
@@ -259,9 +259,7 @@ def button_marimo_1(mo):
     el_clear = mo.ui.run_button(label="🧹 Limpiar Filtros", full_width=True)
 
     el_apply = mo.ui.run_button(
-        label="🔄 Aplicar Filtros",
-        kind="info",
-        full_width=True
+        label="🔄 Aplicar Filtros", kind="info", full_width=True
     )
     return (el_clear,)
 
@@ -390,34 +388,55 @@ def _(
         label="Producto Bulk:",
         value="Todos",
         full_width=True,
+        searchable=True,
     )
     el_pres = mo.ui.dropdown(
-        options=pres_opts, label="Presentación:", value="Todos", full_width=True
+        options=pres_opts,
+        label="Presentación:",
+        value="Todos",
+        full_width=True,
+        searchable=True,
     )
     el_sub = mo.ui.dropdown(
-        options=sub_opts, label="Subcategoría:", value="Todos", full_width=True
+        options=sub_opts,
+        label="Subcategoría:",
+        value="Todos",
+        full_width=True,
+        searchable=True,
     )
     el_esp = mo.ui.dropdown(
         options=esp_opts,
         label="Especie Destino:",
         value="Todos",
         full_width=True,
+        searchable=True,
     )
     el_ecommerce = mo.ui.dropdown(
         options=ecommerce_opts,
         label="E-commerce:",
         value="Todos",
         full_width=True,
+        searchable=True,
     )
-    el_date_range = mo.ui.date_range(start=start_date, stop=end_date, label="Rango de Fechas:", full_width=True)
+    el_date_range = mo.ui.date_range(
+        start=start_date,
+        stop=end_date,
+        label="Rango de Fechas:",
+        full_width=True,
+    )
     el_marca = mo.ui.dropdown(
-        options=marca_opts, label="Marca:", value="Todos", full_width=True
+        options=marca_opts,
+        label="Marca:",
+        value="Todos",
+        full_width=True,
+        searchable=True,
     )
     el_prod_biom = mo.ui.dropdown(
         options=prod_biom,
         label="Producto Biomont:",
         value="Todos",
         full_width=True,
+        searchable=True,
     )
     return (
         el_bulk,
@@ -534,7 +553,9 @@ def _(math, mo):
     def crear_variacion_html(precio_actual, precio_anterior):
         """Crea el HTML para mostrar la variación con el día anterior en marimo"""
 
-        es_nan_actual = isinstance(precio_actual, float) and math.isnan(precio_actual)
+        es_nan_actual = isinstance(precio_actual, float) and math.isnan(
+            precio_actual
+        )
 
         # Validaciones iniciales
         if (
@@ -596,9 +617,7 @@ def _(crear_variacion_html, mo, pd):
             return mo.md("⚠️ No hay datos para comparar")
 
         # Preparación de Fechas y Tiendas
-        todas_tiendas = sorted(
-            df_comp["ecommerce"].dropna().unique()
-        )
+        todas_tiendas = sorted(df_comp["ecommerce"].dropna().unique())
         tiendas = (
             todas_tiendas[:3] if len(todas_tiendas) >= 3 else todas_tiendas
         )
@@ -664,7 +683,6 @@ def _(crear_variacion_html, mo, pd):
                 es_max = es_num and val == max_val and max_val != min_val
                 es_min = es_num and val == min_val and max_val != min_val
 
-                # Lógica de colores Tailwind v4
                 bg_class = (
                     "bg-emerald-50"
                     if es_max
