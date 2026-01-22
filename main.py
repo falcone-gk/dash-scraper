@@ -943,8 +943,7 @@ def server_layout():
                                                 ].max(),
                                                 start_date=df["fecha_dia"].max()
                                                 - timedelta(days=30),
-                                                end_date=df["fecha_dia"].max()
-                                                + timedelta(days=1),
+                                                end_date=df["fecha_dia"].max(),
                                                 className="mb-3 w-100",
                                             ),
                                             html.Label(
