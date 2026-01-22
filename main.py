@@ -1,7 +1,7 @@
 import base64
 import os
 import warnings
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 import dash_bootstrap_components as dbc
 import pandas as pd
@@ -623,6 +623,7 @@ def server_layout():
         [
             # Este componente dispara la carga inicial y las actualizaciones
             dcc.Interval(id="init", n_intervals=0, max_intervals=1),
+            dcc.Store(id="store-df-version", data=0),
             dbc.Row(
                 [
                     dbc.Col(
@@ -1197,6 +1198,73 @@ def limpiar_filtros(n_clicks):
         "ALL",
         fecha_inicio.strftime("%Y-%m-%d"),
         fecha_max.strftime("%Y-%m-%d"),
+    )
+
+
+@app.callback(
+    [
+        Output("filtro-nombre-producto", "options"),
+        Output("filtro-subcategoria", "options"),
+        Output("filtro-biomont", "options"),
+        Output("filtro-bulk", "options"),
+        Output("filtro-presentacion", "options"),
+        Output("filtro-especie", "options"),
+        Output("filtro-ecommerce", "options"),
+        Output("filtro-marca", "options"),
+        Output("filtro-fechas", "min_date_allowed"),
+        Output("filtro-fechas", "max_date_allowed"),
+        Output("store-df-version", "data"),
+    ],
+    Input("btn-actualizar", "n_clicks"),
+    prevent_initial_call=True,
+)
+def actualizar_opciones(_):
+    cache.delete_memoized(get_precios_por_dia)
+    df = get_precios_por_dia()
+
+    return (
+        [
+            {"label": str(p), "value": p}
+            for p in sorted(df["nombre_producto"].dropna().unique())
+        ],
+        [{"label": "Todas", "value": "ALL"}]
+        + [
+            {"label": str(x), "value": x}
+            for x in sorted(df["subcategoria_producto"].dropna().unique())
+        ],
+        [{"label": "Todos", "value": "ALL"}]
+        + [
+            {"label": str(x), "value": x}
+            for x in sorted(df["biomont_producto"].dropna().unique())
+        ],
+        [{"label": "Todos", "value": "ALL"}]
+        + [
+            {"label": str(x), "value": x}
+            for x in sorted(df["segmento_producto"].dropna().unique())
+        ],
+        [{"label": "Todas", "value": "ALL"}]
+        + [
+            {"label": str(x), "value": x}
+            for x in sorted(df["presentacion_producto"].dropna().unique())
+        ],
+        [{"label": "Todas", "value": "ALL"}]
+        + [
+            {"label": str(x), "value": x}
+            for x in sorted(df["especie_destino_producto"].dropna().unique())
+        ],
+        [{"label": "Todos", "value": "ALL"}]
+        + [
+            {"label": str(x), "value": x}
+            for x in sorted(df["ecommerce"].dropna().unique())
+        ],
+        [{"label": "Todas", "value": "ALL"}]
+        + [
+            {"label": str(x), "value": x}
+            for x in sorted(df["marca_producto"].dropna().unique())
+        ],
+        df["fecha_dia"].min(),
+        df["fecha_dia"].max(),
+        datetime.now().timestamp(),  # fuerza downstream callbacks
     )
 
 
