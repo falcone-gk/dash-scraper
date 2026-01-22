@@ -196,7 +196,7 @@ def _(mo):
     return (logo,)
 
 
-@app.cell(hide_code=True)
+@app.cell
 def _(logo, mo):
     mo.md(f"""
     <div class="bg-white rounded-xl shadow-sm border-none mb-12">
@@ -593,9 +593,9 @@ def _(math, mo):
 def _(crear_variacion_html, mo, pd):
     def render_comparativa_ecommerce(df_comp):
         if df_comp is None or len(df_comp) == 0:
-            return mo.md("⚠️ No hay datos para comparar").bold().py(2).center()
+            return mo.md("⚠️ No hay datos para comparar")
 
-        # 1. Preparación de Fechas y Tiendas
+        # Preparación de Fechas y Tiendas
         todas_tiendas = sorted(
             df_comp["ecommerce"].dropna().unique()
         )
@@ -612,9 +612,9 @@ def _(crear_variacion_html, mo, pd):
         if len(df_hoy) == 0:
             return mo.md(
                 f"⚠️ No hay datos para la fecha {fecha_mas_reciente.date()}"
-            ).italic()
+            )
 
-        # 2. Pivot Table
+        # Pivot Table
         pivot_table = df_hoy.pivot_table(
             index="nombre_producto",
             columns="ecommerce",
@@ -628,7 +628,7 @@ def _(crear_variacion_html, mo, pd):
 
         pivot_table = pivot_table[["nombre_producto"] + tiendas]
 
-        # 3. Variaciones vs Ayer
+        # Variaciones vs Ayer
         variaciones = {}
         if not df_ayer.empty:
             precios_ayer = (
@@ -646,7 +646,7 @@ def _(crear_variacion_html, mo, pd):
                     variaciones[prod] = {}
                 variaciones[prod][tienda] = p_ayer
 
-        # 4. Construcción de Filas HTML
+        # Construcción de Filas HTML
         rows_html = []
         for _, row in pivot_table.iterrows():
             precios_validos = [
@@ -705,7 +705,7 @@ def _(crear_variacion_html, mo, pd):
                 </tr>
             """)
 
-        # 5. Header y Layout Final
+        # Header y Layout Final
         header_tiendas = "".join(
             [
                 f'<th class="p-3 text-xs text-center font-bold uppercase text-slate-500 bg-slate-100 border border-slate-200">{t}</th>'
