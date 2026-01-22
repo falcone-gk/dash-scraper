@@ -1550,5 +1550,4 @@ def download_csv(n_clicks, filtros):
 
 # EJECUTAR APP
 if __name__ == "__main__":
-    # app.run(debug=False, port=8070)
-    app.run(debug=True)
+    app.run(debug=False)
