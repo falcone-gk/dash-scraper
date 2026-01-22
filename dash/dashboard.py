@@ -189,16 +189,20 @@ def _(go):
     return (get_fig_principal,)
 
 
-@app.cell(hide_code=True)
+@app.cell
 def _(mo):
-    mo.md(r"""
+    logo = mo.image("dash/public/logo-biomont.png", height="80px")
+    return (logo,)
+
+
+@app.cell(hide_code=True)
+def _(logo, mo):
+    mo.md(f"""
     <div class="bg-white rounded-xl shadow-sm border-none mb-12">
       <div class="px-6 py-2">
         <div class="flex items-center gap-4">
           <div class="flex-none flex items-center">
-            <img src="public/logo-biomont.png"
-                 class="max-h-20 w-auto object-contain"
-                 alt="Logo">
+            {logo}
           </div>
           <div class="flex-1 flex flex-col justify-center">
             <h1 class="text-4xl font-bold text-blue-700 leading-tight mb-0">
