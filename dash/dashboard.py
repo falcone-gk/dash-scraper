@@ -2,7 +2,7 @@ import marimo
 
 __generated_with = "0.19.4"
 app = marimo.App(
-    width="medium",
+    width="full",
     app_title=" Monitoreo de Precios en E-commerce ",
     css_file="assets/css/index.css",
     html_head_file="assets/html/head.html",
