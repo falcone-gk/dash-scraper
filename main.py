@@ -324,6 +324,7 @@ def crear_graficos(df_filtrado, df_comparativa=None):
             # Reordenar columnas para que las tiendas estén en el orden deseado
             column_order = ["nombre_producto"] + tiendas
             pivot_table = pivot_table[column_order]
+            pivot_table = pivot_table.fillna("-")
 
             # Calcular precios del día anterior para cada producto
             variaciones = {}
@@ -422,10 +423,8 @@ def crear_graficos(df_filtrado, df_comparativa=None):
                                             html.Span(
                                                 f"S/ {value:.2f}"
                                                 if value != "-"
-                                                and isinstance(
-                                                    value, (int, float)
-                                                )
-                                                else str(value),
+                                                and pd.notna(value)
+                                                else "-",
                                                 style={
                                                     "fontWeight": "bold"
                                                     if es_max or es_min
@@ -1550,4 +1549,4 @@ def download_csv(n_clicks, filtros):
 
 # EJECUTAR APP
 if __name__ == "__main__":
-    app.run(debug=False)
+    app.run(debug=True)
