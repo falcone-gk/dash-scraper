@@ -4,7 +4,9 @@ import warnings
 from datetime import datetime, timedelta
 
 import dash_bootstrap_components as dbc
+import numpy as np
 import pandas as pd
+import plotly.express as px
 import plotly.graph_objects as go
 from dotenv import load_dotenv
 from flask_caching import Cache
@@ -147,15 +149,28 @@ def crear_graficos(df_filtrado, df_comparativa=None):
     )
 
     fig_principal = go.Figure()
+    productos_unicos = sorted(df_prod["descripcion_producto"].unique())
+    n_productos = len(productos_unicos)
+    PALETA = px.colors.sequential.Blues
+    if n_productos <= 8:
+        colors = PALETA[-n_productos:]  # Los más oscuros al final
+    else:
+        positions = np.linspace(0.3, 1, n_productos)
+        colors = px.colors.sample_colorscale(PALETA, positions)
 
-    for prod, df_i in df_prod.groupby("descripcion_producto"):
+    for idx, prod in enumerate(productos_unicos):
+        df_i = df_prod[df_prod["descripcion_producto"] == prod]
+
+        color = colors[idx % len(colors)]
+
         fig_principal.add_trace(
             go.Scatter(
                 x=df_i["fecha_dia"],
                 y=df_i["promedio"],
                 mode="lines+markers",
                 name=str(prod),
-                line=dict(width=2),
+                line=dict(width=2, color=color),
+                marker=dict(size=6, color=color, symbol="circle"),
                 opacity=0.85,
                 customdata=df_i[["maximo", "minimo", "promedio"]],
                 hovertemplate="<b>%{fullData.name}</b><br>"
@@ -168,7 +183,7 @@ def crear_graficos(df_filtrado, df_comparativa=None):
         )
 
     fig_principal.update_layout(
-        title=f"Evolución de precios por producto ({df_prod['descripcion_producto'].nunique()} productos)",
+        title=f"Evolución de precios por producto ({n_productos} productos)",
         xaxis_title="Fecha",
         yaxis_title="Precio (S/)",
         hovermode="x unified",
@@ -186,12 +201,20 @@ def crear_graficos(df_filtrado, df_comparativa=None):
         margin=dict(b=120),
     )
 
-    # Boxplot - Distribución de precios
+    # Boxplot - Distribución de precios con tonos
     fig_boxplot = go.Figure()
+
+    # O usando la paleta Blues:
+    box_colors_blues = [
+        px.colors.sequential.Blues[8],  # Azul oscuro
+        px.colors.sequential.Blues[5],  # Azul medio
+        px.colors.sequential.Blues[8],  # Azul claro
+    ]
+
     for col, name, color in [
-        ("maximo", "Máximo", "red"),
-        ("minimo", "Mínimo", "green"),
-        ("promedio", "Promedio", "blue"),
+        ("maximo", "Máximo", box_colors_blues[0]),
+        ("minimo", "Mínimo", box_colors_blues[1]),
+        ("promedio", "Promedio", box_colors_blues[2]),
     ]:
         fig_boxplot.add_trace(
             go.Box(
@@ -199,6 +222,7 @@ def crear_graficos(df_filtrado, df_comparativa=None):
                 name=name,
                 marker_color=color,
                 boxmean=True,
+                line=dict(color=color, width=2),
             )
         )
 
@@ -210,7 +234,7 @@ def crear_graficos(df_filtrado, df_comparativa=None):
         showlegend=False,
     )
 
-    # Gráfico de conteo por día
+    # Gráfico de conteo por día con Blues
     df_conteo = (
         df_filtrado.groupby("fecha_dia")["descripcion_producto"]
         .nunique()
@@ -223,7 +247,18 @@ def crear_graficos(df_filtrado, df_comparativa=None):
             x=df_conteo["fecha_dia"],
             y=df_conteo["n_productos"],
             name="Productos únicos",
-            marker_color="orange",
+            marker=dict(
+                color=df_conteo["n_productos"],
+                colorscale="Blues",  # Escala 100% azul
+                showscale=True,
+                colorbar=dict(
+                    title="Cantidad",
+                    thickness=15,
+                    len=0.5,
+                    tickfont=dict(size=10),
+                ),
+                line=dict(color="rgba(0,50,100,0.3)", width=0.5),
+            ),
         )
     )
 
@@ -233,6 +268,7 @@ def crear_graficos(df_filtrado, df_comparativa=None):
         yaxis_title="Cantidad de productos",
         template="plotly_white",
         height=300,
+        showlegend=False,
     )
 
     # Estadísticas rápidas
@@ -310,7 +346,7 @@ def crear_graficos(df_filtrado, df_comparativa=None):
         else:
             # Crear tabla pivot con promedio por producto y tienda
             pivot_table = df_hoy.pivot_table(
-                index="nombre_producto",
+                index="descripcion_producto",
                 columns="ecommerce",
                 values="promedio",
                 aggfunc="mean",
@@ -322,7 +358,7 @@ def crear_graficos(df_filtrado, df_comparativa=None):
                     pivot_table[tienda] = "-"
 
             # Reordenar columnas para que las tiendas estén en el orden deseado
-            column_order = ["nombre_producto"] + tiendas
+            column_order = ["descripcion_producto"] + tiendas
             pivot_table = pivot_table[column_order]
             pivot_table = pivot_table.fillna("-")
 
@@ -330,14 +366,14 @@ def crear_graficos(df_filtrado, df_comparativa=None):
             variaciones = {}
             if len(df_ayer) > 0:
                 precios_ayer = (
-                    df_ayer.groupby(["nombre_producto", "ecommerce"])[
+                    df_ayer.groupby(["descripcion_producto", "ecommerce"])[
                         "promedio"
                     ]
                     .mean()
                     .reset_index()
                 )
                 for _, row in precios_ayer.iterrows():
-                    producto = row["nombre_producto"]
+                    producto = row["descripcion_producto"]
                     tienda = row["ecommerce"]
                     precio_ayer = row["promedio"]
                     if producto not in variaciones:
@@ -440,7 +476,7 @@ def crear_graficos(df_filtrado, df_comparativa=None):
                                         crear_variacion_html(
                                             value,
                                             variaciones.get(
-                                                row["nombre_producto"], {}
+                                                row["descripcion_producto"], {}
                                             ).get(tienda, None),
                                         )
                                     ),
@@ -463,7 +499,7 @@ def crear_graficos(df_filtrado, df_comparativa=None):
                     html.Tr(
                         [
                             html.Td(
-                                row["nombre_producto"],
+                                row["descripcion_producto"],
                                 style={
                                     "position": "sticky",
                                     "left": 0,
