@@ -1248,6 +1248,8 @@ def limpiar_filtros(n_clicks):
         Output("filtro-marca", "options"),
         Output("filtro-fechas", "min_date_allowed"),
         Output("filtro-fechas", "max_date_allowed"),
+        Output("filtro-fechas", "start_date", allow_duplicate=True),
+        Output("filtro-fechas", "end_date", allow_duplicate=True),
         Output("store-df-version", "data"),
     ],
     Input("btn-actualizar", "n_clicks"),
@@ -1256,6 +1258,8 @@ def limpiar_filtros(n_clicks):
 def actualizar_opciones(_):
     cache.delete_memoized(get_precios_por_dia)
     df = get_precios_por_dia()
+    fecha_max = df["fecha_dia"].max()
+    fecha_inicio = fecha_max - timedelta(days=30)
 
     return (
         [
@@ -1298,7 +1302,9 @@ def actualizar_opciones(_):
             for x in sorted(df["marca_producto"].dropna().unique())
         ],
         df["fecha_dia"].min(),
-        df["fecha_dia"].max(),
+        fecha_max,
+        fecha_inicio.strftime("%Y-%m-%d"),
+        fecha_max.strftime("%Y-%m-%d"),
         datetime.now().timestamp(),  # fuerza downstream callbacks
     )
 
