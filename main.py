@@ -1195,7 +1195,7 @@ def server_layout():
 
 
 # LAYOUT DASH
-app.layout = server_layout()
+app.layout = server_layout
 
 # CALLBACKS ########################################################################
 
